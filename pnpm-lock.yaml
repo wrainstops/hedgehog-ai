@@ -20,6 +20,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/storage
     devDependencies:
+      '@types/node':
+        specifier: ^25.9.3
+        version: 25.9.3
       '@vitejs/plugin-react':
         specifier: ^4.3.0
         version: 4.7.0(vite@5.4.21(@types/node@25.9.3))
@@ -2563,7 +2566,7 @@ snapshots:
 
   '@types/yauzl@2.10.3':
     dependencies:
-      '@types/node': 20.19.43
+      '@types/node': 25.9.3
     optional: true
 
   '@vitejs/plugin-react@4.7.0(vite@5.4.21(@types/node@25.9.3))':
