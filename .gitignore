@@ -1,0 +1,31 @@
+node_modules/
+.pnpm-store/
+dist/
+out/
+build/
+.cache/
+.turbo/
+*.log
+.DS_Store
+.env
+.env.local
+
+# Electron
+release/
+app-builds/
+
+# SQLite / 用户数据
+*.db
+*.sqlite
+*.sqlite3
+userData/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/

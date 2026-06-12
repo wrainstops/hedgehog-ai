@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "updated_at": "2026-06-12T00:00:00Z",
+  "items": [
+    {
+      "id": "qwen2-1.5b-instruct-q4_k_m",
+      "version": "1.0.0",
+      "kind": "llm",
+      "name": {
+        "zh-CN": "Qwen2 1.5B Instruct (Q4_K_M)",
+        "en-US": "Qwen2 1.5B Instruct (Q4_K_M)"
+      },
+      "description": {
+        "zh-CN": "轻量级中文聊天模型，适合 8GB 内存设备本地推理。",
+        "en-US": "Lightweight Chinese chat model for 8GB devices."
+      },
+      "size_bytes": 1048576000,
+      "recommended": true,
+      "min_memory_gb": 4,
+      "license": { "name": "Apache-2.0", "url": "https://spdx.org/licenses/Apache-2.0.html" },
+      "source": { "name": "Qwen", "repo": "https://github.com/QwenLM/Qwen2" },
+      "download": {
+        "url": "https://huggingface.co/Qwen/Qwen2-1.5B-Instruct-GGUF/resolve/main/qwen2-1_5b-instruct-q4_k_m.gguf",
+        "filename": "qwen2-1_5b-instruct-q4_k_m.gguf",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "mirrors": []
+      },
+      "llm": {
+        "quant": "Q4_K_M",
+        "languages": ["zh", "en"]
+      }
+    },
+    {
+      "id": "faster-whisper-small-zh",
+      "version": "1.0.0",
+      "kind": "asr",
+      "name": {
+        "zh-CN": "Faster-Whisper Small (中文)",
+        "en-US": "Faster-Whisper Small (zh)"
+      },
+      "description": {
+        "zh-CN": "基于 CTranslate2 的小型语音识别模型，中文友好。",
+        "en-US": "Small CTranslate2-based ASR model with good Chinese support."
+      },
+      "size_bytes": 524288000,
+      "recommended": true,
+      "min_memory_gb": 2,
+      "license": { "name": "MIT", "url": "https://spdx.org/licenses/MIT.html" },
+      "source": { "name": "Systran" },
+      "download": {
+        "url": "https://github.com/SYSTRAN/faster-whisper/raw/master/README.md",
+        "filename": "faster-whisper-small.zip",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "mirrors": [],
+        "needsUnzip": true
+      },
+      "asr": {
+        "format": "ctranslate2",
+        "languages": ["zh", "en"]
+      }
+    },
+    {
+      "id": "skill-weather-cn",
+      "version": "1.0.0",
+      "kind": "skill",
+      "name": {
+        "zh-CN": "天气查询（中国）",
+        "en-US": "Weather (China)"
+      },
+      "description": {
+        "zh-CN": "提供中国城市天气查询的技能。",
+        "en-US": "Query weather for Chinese cities."
+      },
+      "size_bytes": 102400,
+      "license": { "name": "MIT", "url": "https://spdx.org/licenses/MIT.html" },
+      "source": { "name": "Hedgehog" },
+      "download": {
+        "url": "https://example.com/hedgehog-skills/weather-cn-v1.zip",
+        "filename": "weather-cn-v1.zip",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "mirrors": [],
+        "needsUnzip": true
+      },
+      "skill": {
+        "runtime": "http-proxy",
+        "permissions": {
+          "network": ["api.open-meteo.com"]
+        },
+        "tools": [
+          {
+            "name": "get_weather",
+            "description": {
+              "zh-CN": "查询指定城市的天气",
+              "en-US": "Get weather in a given city"
+            },
+            "input_schema": {
+              "type": "object",
+              "properties": { "city": { "type": "string" } },
+              "required": ["city"]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

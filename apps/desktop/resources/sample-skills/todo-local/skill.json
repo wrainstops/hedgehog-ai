@@ -1,0 +1,25 @@
+{
+  "id": "todo-local",
+  "version": "1.0.0",
+  "name": "本地待办（JSONPlaceholder 示例）",
+  "description": "使用 JSONPlaceholder 测试 API 作为示例",
+  "runtime": "http-proxy",
+  "permissions": {
+    "network": ["https://jsonplaceholder.typicode.com"]
+  },
+  "tools": [
+    {
+      "name": "get_post",
+      "description": "获取一篇示例文章",
+      "endpoint": "https://jsonplaceholder.typicode.com/posts/{id}",
+      "method": "GET",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "文章 ID（1-100）" }
+        },
+        "required": ["id"]
+      }
+    }
+  ]
+}

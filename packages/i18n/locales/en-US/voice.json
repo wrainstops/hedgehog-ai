@@ -1,0 +1,20 @@
+{
+  "title": "Voice Chat",
+  "status.idle": "Hold to talk",
+  "status.listening": "Listening…",
+  "status.transcribing": "Transcribing…",
+  "status.error": "Transcription failed",
+  "hint.holdToTalk": "Hold the microphone to speak, release to send",
+  "hint.releaseToSend": "Release to send transcription",
+  "hint.denied": "Microphone permission required",
+  "hint.noAsr": "No ASR model installed. Visit the capability market to download one.",
+  "button.start": "Start recording",
+  "button.stop": "Stop recording",
+  "button.cancel": "Cancel",
+  "button.chooseAsr": "Pick ASR model",
+  "setting.lang": "Recognition language",
+  "setting.lang.zh": "Chinese",
+  "setting.lang.en": "English",
+  "error.asrCrash": "Speech recognizer crashed unexpectedly",
+  "error.timeout": "No speech detected in time"
+}

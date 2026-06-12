@@ -1,0 +1,16 @@
+{
+  "confirm": "Confirm",
+  "cancel": "Cancel",
+  "ok": "OK",
+  "close": "Close",
+  "retry": "Retry",
+  "delete": "Delete",
+  "edit": "Edit",
+  "save": "Save",
+  "search": "Search",
+  "loading": "Loading…",
+  "error.generic": "Something went wrong, please retry",
+  "error.network": "Network error",
+  "error.diskFull": "Disk is full",
+  "error.permission": "Permission denied"
+}

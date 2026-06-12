@@ -1,0 +1,12 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\apps",
+    "\\apps\\desktop",
+    "\\apps\\desktop\\electron",
+    "\\packages",
+    "\\packages\\i18n"
+  ],
+  "SelectedNode": "\\packages\\i18n\\package.json",
+  "PreviewInSolutionExplorer": false
+}

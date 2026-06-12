@@ -1,0 +1,77 @@
+{
+  "name": "hedgehog-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Hedgehog AI Desktop",
+  "main": "electron/main.cjs",
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm exec concurrently -k \"pnpm exec vite\" \"pnpm exec wait-on http://localhost:5173 && pnpm exec cross-env VITE_DEV_SERVER_URL=http://localhost:5173 pnpm exec electron .\"",
+    "build": "vite build",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win --x64",
+    "dist:mac": "electron-builder --mac --universal",
+    "dist:linux": "electron-builder --linux --x64",
+    "start": "electron .",
+    "check": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@hedgehog/i18n": "workspace:*",
+    "@hedgehog/protocol": "workspace:*",
+    "@hedgehog/storage": "workspace:*"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^32.3.3",
+    "electron-builder": "^25.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.4.0",
+    "vite": "^5.4.0",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "ai.hedgehog.desktop",
+    "productName": "Hedgehog AI",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "resources/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "artifactName": "Hedgehog AI Setup ${version}.${ext}"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

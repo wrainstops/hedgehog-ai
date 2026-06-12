@@ -1,0 +1,51 @@
+// Electron 渲染进程 preload 脚本（contextBridge 暴露安全 API）
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('hedgehog', {
+  // 能力市场
+  capabilityMarket: {
+    getCatalog: (opts) => ipcRenderer.invoke('capability-market:getCatalog', opts),
+    refreshCatalog: (opts) => ipcRenderer.invoke('capability-market:refreshCatalog', opts),
+    listLocalItems: (opts) => ipcRenderer.invoke('capability-market:listLocalItems', opts),
+    setCurrentItem: (kind, id, version) => ipcRenderer.invoke('capability-market:setCurrentItem', kind, id, version),
+    deleteLocalItem: (kind, id, version) => ipcRenderer.invoke('capability-market:deleteLocalItem', kind, id, version),
+    startDownload: (id) => ipcRenderer.invoke('capability-market:startDownload', id),
+    pauseDownload: (id) => ipcRenderer.invoke('capability-market:pauseDownload', id),
+    resumeDownload: (id) => ipcRenderer.invoke('capability-market:resumeDownload', id),
+    cancelDownload: (id) => ipcRenderer.invoke('capability-market:cancelDownload', id),
+    onDownloadProgress: (callback) => {
+      const handler = (_e, id, state) => callback(id, state);
+      ipcRenderer.on('capability-market:downloadsUpdated', handler);
+      return () => ipcRenderer.removeListener('capability-market:downloadsUpdated', handler);
+    }
+  },
+
+  // LLM 推理
+  llm: {
+    getState: () => ipcRenderer.invoke('llm:getState'),
+    load: (id, installPath, opts) => ipcRenderer.invoke('llm:load', id, installPath, opts),
+    unload: () => ipcRenderer.invoke('llm:unload'),
+    generate: (messages, opts) => ipcRenderer.invoke('llm:generate', messages, opts),
+    stop: () => ipcRenderer.invoke('llm:stop'),
+    onToken: (callback) => {
+      const handler = (_e, text) => callback(text);
+      ipcRenderer.on('llm:token', handler);
+      return () => ipcRenderer.removeListener('llm:token', handler);
+    }
+  },
+
+  // 技能运行时
+  skill: {
+    listAll: () => ipcRenderer.invoke('skill:listAll'),
+    listEnabled: () => ipcRenderer.invoke('skill:listEnabled'),
+    enable: (id, version) => ipcRenderer.invoke('skill:enable', id, version),
+    disable: (id, version) => ipcRenderer.invoke('skill:disable', id, version),
+    uninstall: (id, version) => ipcRenderer.invoke('skill:uninstall', id, version),
+    invoke: (id, version, toolName, args) => ipcRenderer.invoke('skill:invoke', id, version, toolName, args)
+  },
+
+  // 文件系统
+  shell: {
+    openPath: (filePath) => ipcRenderer.invoke('shell:openPath', filePath)
+  }
+});

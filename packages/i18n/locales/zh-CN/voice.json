@@ -1,0 +1,20 @@
+{
+  "title": "语音对话",
+  "status.idle": "按住说话",
+  "status.listening": "正在聆听…",
+  "status.transcribing": "正在识别…",
+  "status.error": "识别失败",
+  "hint.holdToTalk": "按住麦克风开始说话，松开结束",
+  "hint.releaseToSend": "松开以发送识别结果",
+  "hint.denied": "需要麦克风权限",
+  "hint.noAsr": "未安装语音识别模型，前往能力市场下载",
+  "button.start": "开始录音",
+  "button.stop": "结束录音",
+  "button.cancel": "取消",
+  "button.chooseAsr": "选择语音识别模型",
+  "setting.lang": "识别语言",
+  "setting.lang.zh": "中文",
+  "setting.lang.en": "英文",
+  "error.asrCrash": "语音识别进程异常",
+  "error.timeout": "长时间未检测到语音输入"
+}

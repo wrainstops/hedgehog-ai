@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@hedgehog/protocol": ["../../packages/protocol/src/index.ts"],
+      "@hedgehog/storage": ["../../packages/storage/src/index.ts"],
+      "@hedgehog/i18n": ["../../packages/i18n/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "electron/**/*", "features/**/*"]
+}
