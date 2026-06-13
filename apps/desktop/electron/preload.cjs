@@ -47,5 +47,17 @@ contextBridge.exposeInMainWorld('hedgehog', {
   // 文件系统
   shell: {
     openPath: (filePath) => ipcRenderer.invoke('shell:openPath', filePath)
+  },
+
+  // i18n
+  i18n: {
+    getLang: () => ipcRenderer.invoke('i18n:getLang'),
+    setLang: (lang) => ipcRenderer.invoke('i18n:setLang', lang),
+    t: (key, params) => ipcRenderer.invoke('i18n:t', key, params),
+    onLangChange: (callback) => {
+      const handler = (_e, lang) => callback(lang);
+      ipcRenderer.on('i18n:changed', handler);
+      return () => ipcRenderer.removeListener('i18n:changed', handler);
+    }
   }
 });

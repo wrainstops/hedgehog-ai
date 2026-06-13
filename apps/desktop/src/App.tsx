@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import MarketPage from './pages/MarketPage';
 import InstalledPage from './pages/InstalledPage';
 import ConversationPage from './pages/ConversationPage';
@@ -13,41 +13,86 @@ const NAV_LABELS: Record<PageKey, string> = {
   settings: 'nav.settings',
 };
 
-// 轻量的 React 侧 i18n hook：通过 preload 暴露的 window.hedgehog.t
-// 为避免闪烁，这里做一层缓存。
+// React i18n hook：通过 preload 暴露的 window.hedgehog.i18n API
 function useI18n() {
   const [lang, setLang] = useState<string>('zh-CN');
-  const [, forceUpdate] = useState(0);
+  const [cache, setCache] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    window.hedgehog?.getLang?.().then((l: string) => l && setLang(l));
-    return window.hedgehog?.onLangChange?.(setLang) ?? (() => {});
+    // 获取初始语言
+    window.hedgehog?.i18n?.getLang?.().then((l: string) => {
+      console.log('[i18n] Initial lang:', l);
+      l && setLang(l);
+    });
+
+    // 监听语言变化
+    const unsubscribe = window.hedgehog?.i18n?.onLangChange?.((newLang: string) => {
+      console.log('[i18n] Lang changed to:', newLang);
+      setLang(newLang);
+      setCache({}); // 清空缓存
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
   }, []);
+
+  // t 函数
+  const t = async (key: string, params?: Record<string, string | number>): Promise<string> => {
+    console.log('[i18n.t] Called with key:', key, 'cache length:', Object.keys(cache).length);
+    if (cache[key]) {
+      console.log('[i18n.t] Returning from cache:', cache[key]);
+      return cache[key];
+    }
+    console.log('[i18n.t] Fetching from main process...');
+    const result = await window.hedgehog?.i18n?.t?.(key, params);
+    console.log('[i18n.t] Got result from main:', key, '->', result);
+    setCache((prev) => ({ ...prev, [key]: result ?? key }));
+    return result ?? key;
+  };
 
   return {
     lang,
-    setLang: (l: string) => window.hedgehog?.setLang?.(l),
-    t: (key: string, params?: Record<string, string | number>) => {
-      // 主进程中是真实翻译值；这里仅在渲染侧做一层显示同步
-      // 我们直接把 key 展示出来便于开发
-      return window.hedgehog?.t?.(key, params) ?? key;
+    setLang: async (l: string) => {
+      await window.hedgehog?.i18n?.setLang?.(l);
     },
-    refresh: () => forceUpdate((n) => n + 1),
+    t,
   };
 }
 
 export default function App() {
   const [page, setPage] = useState<PageKey>('market');
-  const { t } = useI18n();
+  const { lang, t } = useI18n();
+  const [navLabels, setNavLabels] = useState<Record<PageKey, string>>({
+    conversation: '对话',
+    market: '能力市场',
+    installed: '已安装',
+    settings: '设置',
+  });
+  const [pageTitle, setPageTitle] = useState<string>('能力市场');
 
-  const title = useMemo(() => {
-    switch (page) {
-      case 'conversation': return '对话';
-      case 'market': return '能力市场';
-      case 'installed': return '已安装';
-      case 'settings': return '设置';
-    }
-  }, [page]);
+  // 加载导航标签翻译 - 只依赖 lang
+  useEffect(() => {
+    console.log('[App] Loading nav labels for lang:', lang);
+    const loadLabels = async () => {
+      const labels: Record<PageKey, string> = {} as Record<PageKey, string>;
+      for (const key of Object.keys(NAV_LABELS) as PageKey[]) {
+        console.log('[App] Getting translation for:', NAV_LABELS[key]);
+        const label = await t(NAV_LABELS[key]);
+        console.log('[App] Loaded label:', NAV_LABELS[key], '->', label);
+        labels[key] = label;
+      }
+      console.log('[App] Setting navLabels:', labels);
+      setNavLabels(labels);
+
+      // 更新页面标题
+      const titleKey = NAV_LABELS[page];
+      const title = await t(titleKey);
+      console.log('[App] Setting pageTitle:', title);
+      setPageTitle(title);
+    };
+    loadLabels();
+  }, [lang]); // 只依赖 lang，不依赖 t
 
   return (
     <div className="app">
@@ -60,16 +105,13 @@ export default function App() {
               className={page === k ? 'active' : ''}
               onClick={() => setPage(k)}
             >
-              {t(NAV_LABELS[k])}
+              {navLabels[k]}
             </li>
           ))}
         </ul>
       </aside>
       <main className="main">
-        <h2>{t(title === '对话' ? 'nav.conversation' :
-              title === '能力市场' ? 'nav.capabilityMarket' :
-              title === '已安装' ? 'nav.myInstalled' :
-              'nav.settings')}</h2>
+        <h2>{pageTitle}</h2>
         {page === 'market' && <MarketPage />}
         {page === 'installed' && <InstalledPage />}
         {page === 'conversation' && <ConversationPage />}

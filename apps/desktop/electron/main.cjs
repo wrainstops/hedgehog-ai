@@ -133,34 +133,53 @@ const Storage = (() => {
 function loadMessages(lang) {
   const namespaces = ['common', 'nav', 'model-market', 'voice', 'skill-market'];
   const result = {};
+  // __dirname 是 apps/desktop/electron/，需要上 3 级到项目根目录
   const localeDirs = [
-    path.join(__dirname, '..', '..', 'packages', 'i18n', 'locales', lang),
+    path.join(__dirname, '..', '..', '..', 'packages', 'i18n', 'locales', lang),
     path.join(userData, 'locales', lang),
   ];
+  console.log('[i18n] Loading from:', localeDirs[0]);
   for (const ns of namespaces) {
     for (const dir of localeDirs) {
       const file = path.join(dir, `${ns}.json`);
       try {
         const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
-        Object.assign(result, parsed);
-      } catch { /* try next */ }
+        // 为每个键添加命名空间前缀
+        for (const [key, value] of Object.entries(parsed)) {
+          result[`${ns}.${key}`] = value;
+        }
+      } catch (err) {
+        console.log('[i18n] Failed to load:', file, err?.message);
+      }
     }
   }
+  console.log('[i18n] Loaded', Object.keys(result).length, 'translation keys');
   return result;
 }
 
 let i18nCache = { lang: 'zh-CN', dict: {} };
 function getI18nDict(lang) {
-  if (i18nCache.lang === lang) return i18nCache.dict;
+  console.log('[i18n main] getI18nDict called with:', lang, 'cached lang:', i18nCache.lang);
+  if (i18nCache.lang === lang && Object.keys(i18nCache.dict).length > 0) {
+    console.log('[i18n main] Returning cached dict with', Object.keys(i18nCache.dict).length, 'keys');
+    return i18nCache.dict;
+  }
+  console.log('[i18n main] Loading fresh translations...');
   const primary = loadMessages(lang);
+  console.log('[i18n main] Primary dict keys:', Object.keys(primary).length);
   const fallback = loadMessages('zh-CN');
+  console.log('[i18n main] Fallback dict keys:', Object.keys(fallback).length);
   const dict = { ...fallback, ...primary };
+  console.log('[i18n main] Merged dict keys:', Object.keys(dict).length, 'nav.settings:', dict['nav.settings']);
   i18nCache = { lang, dict };
   return dict;
 }
 function translate(key, params) {
-  const dict = getI18nDict(Storage.getSetting('i18n.lang') || 'zh-CN');
+  const currentLang = Storage.getSetting('i18n.lang') || 'zh-CN';
+  console.log('[i18n main] translate called, key:', key, 'currentLang:', currentLang);
+  const dict = getI18nDict(currentLang);
   let raw = dict[key] ?? key;
+  console.log('[i18n main] translate result:', key, '->', raw);
   if (params) {
     for (const [k, v] of Object.entries(params)) raw = raw.split('{' + k + '}').join(String(v));
   }
@@ -455,7 +474,20 @@ app.whenReady().then(() => {
 
   // i18n
   ipcMain.handle('i18n:getLang', () => Storage.getSetting('i18n.lang') || 'zh-CN');
-  ipcMain.handle('i18n:setLang', async (_e, lang) => { Storage.setSetting('i18n.lang', lang); i18nCache = { lang, dict: {} }; return true; });
+  ipcMain.handle('i18n:setLang', async (_e, lang) => {
+    const oldLang = Storage.getSetting('i18n.lang') || 'zh-CN';
+    Storage.setSetting('i18n.lang', lang);
+    i18nCache = { lang, dict: {} };
+    // 广播语言变化到所有窗口
+    if (oldLang !== lang) {
+      BrowserWindow.getAllWindows().forEach(win => {
+        if (!win.isDestroyed()) {
+          win.webContents.send('i18n:changed', lang);
+        }
+      });
+    }
+    return true;
+  });
   ipcMain.handle('i18n:t', (_e, key, params) => translate(key, params));
 
   // settings
