@@ -8,10 +8,9 @@
 ## 快速启动
 
 ```bash
-# 1. 安装依赖（需要 Node 20+）
+# 1. 安装依赖（需要 Node 22, pnpm 8）
 cd hedgehog
 npm install -g node-gyp
-npm --python_mirror=https://registry.npmmirror.com/-/binary/python/ install --global windows-build-tools 
 pnpm install
 
 # 2. 开发模式启动（Vite + Electron 同时拉起）
