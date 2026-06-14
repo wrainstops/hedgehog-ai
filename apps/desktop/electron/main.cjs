@@ -3,7 +3,7 @@
 // - IPC 暴露 window.hedgehog.* API（preload.cjs 已定义）
 // - 能力市场 catalog：HTTP + 内置 fallback + userData cache
 
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const http = require('node:http');
@@ -62,6 +62,9 @@ const Storage = (() => {
           'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
         ).run(k, v);
       },
+      deleteSetting: (k) => {
+        db.prepare('DELETE FROM settings WHERE key = ?').run(k);
+      },
       listLocalItems: (kind) => {
         if (kind) return db.prepare('SELECT * FROM local_items WHERE kind = ? ORDER BY downloaded_at DESC').all(kind);
         return db.prepare('SELECT * FROM local_items ORDER BY kind, downloaded_at DESC').all();
@@ -102,6 +105,7 @@ const Storage = (() => {
   return {
     getSetting: (k) => data.settings[k] ?? null,
     setSetting: (k, v) => { data.settings[k] = v; save(); },
+    deleteSetting: (k) => { delete data.settings[k]; save(); },
     listLocalItems: (kind) => kind ? data.local_items.filter(i => i.kind === kind) : data.local_items,
     insertLocalItem: (it) => {
       const idx = data.local_items.findIndex(x => x.id === it.id && x.version === it.version && x.kind === it.kind);
@@ -193,9 +197,14 @@ let inMemoryCatalog = [];
 function resolveFallbackPath() {
   const tryPaths = [
     path.join(__dirname, '..', 'resources', 'fallback-models.json'),
-    path.join(__dirname, '..', '..', 'resources', 'fallback-models.json'),
+    path.join(__dirname, '..', '..', '..', 'packages', 'i18n', 'locales', 'fallback-models.json'),
   ];
-  return tryPaths.find(p => fs.existsSync(p));
+  const found = tryPaths.find(p => {
+    const exists = fs.existsSync(p);
+    console.log('[i18n] Checking fallback path:', p, exists ? '✓' : '✗');
+    return exists;
+  });
+  return found;
 }
 
 function httpGetJson(url) {
@@ -246,11 +255,83 @@ async function loadCatalog({ kind, force } = {}) {
 }
 
 // --- 下载引擎 ---
-function kindDir(kind) {
-  return ({ llm: llmsDir, asr: asrsDir, tts: ttssDir, skill: skillsDir })[kind] || userData;
+// 默认下载路径（在 userData 下）
+const defaultLlmsDir = path.join(userData, 'llms');
+const defaultAsrsDir = path.join(userData, 'asrs');
+const defaultTtssDir = path.join(userData, 'tts');
+const defaultSkillsDir = path.join(userData, 'skills');
+
+// 获取当前下载路径配置
+function getKindDir(kind) {
+  const customBase = Storage.getSetting('download.base_path');
+  if (customBase) {
+    return path.join(customBase, kind);
+  }
+  return ({
+    llm: defaultLlmsDir,
+    asr: defaultAsrsDir,
+    tts: defaultTtssDir,
+    skill: defaultSkillsDir,
+  })[kind] || userData;
 }
+
+// 确保下载目录存在
+function ensureDir(dir) {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
 const tasks = new Map();   // id -> task
 let activeTaskId = null;
+
+// 获取所有下载路径配置
+ipcMain.handle('settings:getDownloadPaths', () => {
+  const customBase = Storage.getSetting('download.base_path');
+  return {
+    basePath: customBase || userData,
+    isCustom: !!customBase,
+    llmsDir: path.join(customBase || userData, 'llm'),
+    asrsDir: path.join(customBase || userData, 'asr'),
+    ttssDir: path.join(customBase || userData, 'tts'),
+    skillsDir: path.join(customBase || userData, 'skill'),
+  };
+});
+
+// 设置自定义下载路径
+ipcMain.handle('settings:setDownloadPath', (_e, basePath) => {
+  if (basePath && basePath !== userData) {
+    Storage.setSetting('download.base_path', basePath);
+    // 确保新路径存在
+    ensureDir(path.join(basePath, 'llm'));
+    ensureDir(path.join(basePath, 'asr'));
+    ensureDir(path.join(basePath, 'tts'));
+    ensureDir(path.join(basePath, 'skill'));
+  } else {
+    Storage.deleteSetting('download.base_path');
+    // 确保默认路径存在
+    for (const d of [defaultLlmsDir, defaultAsrsDir, defaultTtssDir, defaultSkillsDir]) {
+      ensureDir(d);
+    }
+  }
+  return true;
+});
+
+// Dialog IPC handlers
+ipcMain.handle('dialog:showOpenDialog', async (_e, options) => {
+  const mainWin = BrowserWindow.getAllWindows()[0];
+  return await dialog.showOpenDialog(mainWin, options);
+});
+
+ipcMain.handle('dialog:showSaveDialog', async (_e, options) => {
+  const mainWin = BrowserWindow.getAllWindows()[0];
+  return await dialog.showSaveDialog(mainWin, options);
+});
+
+ipcMain.handle('dialog:showMessageBox', async (_e, options) => {
+  const mainWin = BrowserWindow.getAllWindows()[0];
+  return await dialog.showMessageBox(mainWin, options);
+});
 
 function pushDownloadUpdate() {
   const mainWin = BrowserWindow.getAllWindows()[0];
@@ -278,17 +359,20 @@ async function runTask(t) {
     let success = false;
     for (let attempt = 0; attempt < urls.length && !success; attempt++) {
       t.url = urls[attempt];
+      console.log('[download] Attempting to download from:', t.url);
       try {
         await fetchWithRange(t);
         success = true;
+        console.log('[download] Download completed successfully');
       } catch (e) {
+        console.error('[download] Download failed:', e?.message || e);
         t.error = e?.message || String(e);
         pushDownloadUpdate();
       }
     }
     if (!success) throw new Error(t.error || 'all mirrors failed');
     // unzip if needsUnzip
-    if (t.item.download.needsUnzip) {
+    if (t.item.download?.needsUnzip) {
       t.status = 'extracting';
       pushDownloadUpdate();
       await unzipTo(t.tmpPath, t.targetPath);
@@ -304,8 +388,10 @@ async function runTask(t) {
       sha256: t.sha, downloaded_at: Date.now(), is_current: 0, is_manual_import: 0,
     });
     t.status = 'done';
+    console.log('[download] Task completed:', t.item.id);
     pushDownloadUpdate();
   } catch (err) {
+    console.error('[download] Task failed:', err?.message || err);
     t.status = 'failed';
     t.error = err?.message || String(err);
     pushDownloadUpdate();
@@ -319,8 +405,16 @@ function fetchWithRange(t) {
   return new Promise((resolve, reject) => {
     const client = t.url.startsWith('https:') ? https : http;
     const u = new URL(t.url);
-    const opts = { hostname: u.hostname, port: u.port, path: u.pathname + u.search,
-      headers: t.downloadedBytes > 0 ? { Range: `bytes=${t.downloadedBytes}-` } : {}, timeout: 30_000 };
+    const opts = {
+      hostname: u.hostname,
+      port: u.port || (u.protocol === 'https:' ? 443 : 80),
+      path: u.pathname + u.search,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        ...(t.downloadedBytes > 0 ? { Range: `bytes=${t.downloadedBytes}-` } : {})
+      },
+      timeout: 30_000
+    };
     let hash = crypto.createHash('sha256');
     // 已有部分写入 → hash
     if (t.downloadedBytes > 0 && fs.existsSync(t.tmpPath)) {
@@ -336,6 +430,20 @@ function fetchWithRange(t) {
       fs.closeSync(fd);
     }
     const req = client.get(opts, (res) => {
+      console.log('[download] Response status:', res.statusCode, 'URL:', t.url);
+
+      // Handle redirects
+      if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 303 || res.statusCode === 307 || res.statusCode === 308) {
+        const location = res.headers.location;
+        if (location) {
+          console.log('[download] Redirecting to:', location);
+          t.url = location;
+          res.resume();
+          fetchWithRange(t).then(resolve).catch(reject);
+          return;
+        }
+      }
+
       if (!res.statusCode || (res.statusCode !== 200 && res.statusCode !== 206)) {
         res.resume();
         return reject(new Error(`HTTP ${res.statusCode}`));
@@ -372,7 +480,7 @@ function fetchWithRange(t) {
       res.on('end', () => {
         file.end(() => {
           t.sha = hash.digest('hex');
-          if (t.item.download.sha256 && t.sha !== t.item.download.sha256) {
+          if (t.item.download?.sha256 && t.sha !== t.item.download.sha256) {
             return reject(new Error('sha256 mismatch'));
           }
           resolve();
@@ -381,8 +489,14 @@ function fetchWithRange(t) {
       res.on('error', (e) => { try { file.destroy(); } catch {}; reject(e); });
       file.on('error', (e) => { res.destroy(); reject(e); });
     });
-    req.on('error', reject);
-    req.on('timeout', () => req.destroy(new Error('timeout')));
+    req.on('error', (e) => {
+      console.error('[download] Request error:', e?.message || e);
+      reject(e);
+    });
+    req.on('timeout', () => {
+      console.error('[download] Request timeout');
+      req.destroy(new Error('timeout'));
+    });
     req.end();
   });
 }
@@ -424,18 +538,23 @@ function maybeRunNext() {
 }
 
 function enqueue(item) {
+  console.log('[download] enqueue called with item:', JSON.stringify(item, null, 2));
   if (tasks.has(item.id)) {
     const t = tasks.get(item.id);
     if (t.status === 'failed' || t.status === 'done') tasks.delete(item.id);
     else return;
   }
-  const dir = kindDir(item.kind);
-  const needsUnzip = !!item.download.needsUnzip;
+  const dir = getKindDir(item.kind);
+  console.log('[download] getKindDir for', item.kind, '->', dir);
+  ensureDir(dir);
+  const needsUnzip = !!item.download?.needsUnzip;
   const targetPath = needsUnzip ? path.join(dir, `${item.id}-${item.version}`)
-                                : path.join(dir, item.download.filename || item.id);
-  const tmpPath = path.join(dir, `${item.download.filename || item.id}.download`);
+                                : path.join(dir, item.download?.filename || item.id);
+  const tmpPath = path.join(dir, `${item.download?.filename || item.id}.download`);
+  console.log('[download] targetPath:', targetPath);
+  console.log('[download] tmpPath:', tmpPath);
   const task = {
-    item, kind: item.kind, url: item.download.url, mirrors: item.download.mirrors || [],
+    item, kind: item.kind, url: item.download?.url, mirrors: item.download?.mirrors || [],
     targetPath, tmpPath, totalBytes: item.size_bytes, downloadedBytes: 0,
     speed: 0, status: 'queued', sha: null,
   };
@@ -443,7 +562,7 @@ function enqueue(item) {
   Storage.upsertDownload({
     id: item.id, kind: item.kind, state: 'queued',
     total_bytes: item.size_bytes, downloaded_bytes: 0, speed_bps: 0,
-    started_at: Date.now(), target_path: targetPath, url: item.download.url, mirror_index: 0,
+    started_at: Date.now(), target_path: targetPath, url: item.download?.url, mirror_index: 0,
   });
   pushDownloadUpdate();
   maybeRunNext();
@@ -527,8 +646,14 @@ app.whenReady().then(() => {
     return item;
   });
   ipcMain.handle('capability-market:startDownload', (_e, id) => {
+    console.log('[download] startDownload called with id:', id);
+    console.log('[download] inMemoryCatalog has', inMemoryCatalog.length, 'items');
     const item = inMemoryCatalog.find(x => x.id === id);
-    if (!item) throw new Error(`unknown item: ${id}`);
+    if (!item) {
+      console.log('[download] Item not found in catalog:', id);
+      throw new Error(`unknown item: ${id}`);
+    }
+    console.log('[download] Found item:', item.id, item.name);
     enqueue(item);
     return true;
   });

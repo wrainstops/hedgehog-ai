@@ -79,6 +79,49 @@ declare global {
         t: (key: string, params?: Record<string, string | number>) => Promise<string>;
         onLangChange: (callback: (lang: string) => void) => () => void;
       };
+
+      // 设置
+      settings: {
+        getDownloadPaths: () => Promise<{
+          basePath: string;
+          isCustom: boolean;
+          llmsDir: string;
+          asrsDir: string;
+          ttssDir: string;
+          skillsDir: string;
+        }>;
+        setDownloadPath: (basePath: string) => Promise<boolean>;
+      };
+
+      // 对话框
+      dialog: {
+        showOpenDialog: (options?: {
+          title?: string;
+          defaultPath?: string;
+          properties?: Array<'openFile' | 'openDirectory' | 'multiSelections' | 'showHiddenFiles'>;
+          filters?: Array<{ name: string; extensions: string[] }>;
+        }) => Promise<{
+          canceled: boolean;
+          filePaths: string[];
+        }>;
+        showSaveDialog: (options?: {
+          title?: string;
+          defaultPath?: string;
+          filters?: Array<{ name: string; extensions: string[] }>;
+        }) => Promise<{
+          canceled: boolean;
+          filePath?: string;
+        }>;
+        showMessageBox: (options?: {
+          type?: 'none' | 'info' | 'error' | 'question' | 'warning';
+          title?: string;
+          message: string;
+          detail?: string;
+          buttons?: string[];
+        }) => Promise<{
+          response: number;
+        }>;
+      };
     };
   }
 }

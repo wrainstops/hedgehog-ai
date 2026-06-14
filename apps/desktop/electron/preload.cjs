@@ -14,7 +14,11 @@ contextBridge.exposeInMainWorld('hedgehog', {
     resumeDownload: (id) => ipcRenderer.invoke('capability-market:resumeDownload', id),
     cancelDownload: (id) => ipcRenderer.invoke('capability-market:cancelDownload', id),
     onDownloadProgress: (callback) => {
-      const handler = (_e, id, state) => callback(id, state);
+      // pushDownloadUpdate sends array of downloads
+      const handler = (_e, downloads) => {
+        console.log('[preload] Received downloads update:', downloads);
+        callback(downloads);
+      };
       ipcRenderer.on('capability-market:downloadsUpdated', handler);
       return () => ipcRenderer.removeListener('capability-market:downloadsUpdated', handler);
     }
@@ -49,6 +53,13 @@ contextBridge.exposeInMainWorld('hedgehog', {
     openPath: (filePath) => ipcRenderer.invoke('shell:openPath', filePath)
   },
 
+  // 对话框
+  dialog: {
+    showOpenDialog: (options) => ipcRenderer.invoke('dialog:showOpenDialog', options),
+    showSaveDialog: (options) => ipcRenderer.invoke('dialog:showSaveDialog', options),
+    showMessageBox: (options) => ipcRenderer.invoke('dialog:showMessageBox', options),
+  },
+
   // i18n
   i18n: {
     getLang: () => ipcRenderer.invoke('i18n:getLang'),
@@ -59,5 +70,11 @@ contextBridge.exposeInMainWorld('hedgehog', {
       ipcRenderer.on('i18n:changed', handler);
       return () => ipcRenderer.removeListener('i18n:changed', handler);
     }
+  },
+
+  // 设置
+  settings: {
+    getDownloadPaths: () => ipcRenderer.invoke('settings:getDownloadPaths'),
+    setDownloadPath: (basePath) => ipcRenderer.invoke('settings:setDownloadPath', basePath),
   }
 });

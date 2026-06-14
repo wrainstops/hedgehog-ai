@@ -137,6 +137,11 @@ export default function ConversationPage() {
           <span style={{ color: '#6b7280', marginLeft: 8 }}>
             [{llmState?.status || 'idle'}]
           </span>
+          {generating && (
+            <span style={{ marginLeft: 12, color: '#f59e0b', fontSize: 12 }}>
+              ⏳ 生成中... （首次推理可能需要 30-60 秒预热）
+            </span>
+          )}
         </div>
         <button style={btnStyle()} onClick={() => setShowModelPicker(s => !s)}>
           切换模型
