@@ -8,15 +8,20 @@
 ## 快速启动
 
 ```bash
-# 1. 安装依赖（需要 Node 22, pnpm 8）
+# 1. 安装前准备
+# visual studio 2022 (https://aka.ms/vs/17/release/vs_community.exe)
+# 安装时勾选“使用c++的桌面开发”，并在右侧详细信息中勾选“适用于最新v143生成工具的c++MFC”；“对v143生成工具（最新）的c++/CLI支持”；“windows SDK”；“MSVC V142 - VS 2019 C++ x64/x86 生成工具”...
+# 设置用户环境变量“msvs_version: 2022”；“VCINSTALLDIR: XXX\2022\Community\VC”（即 visual studio 2022产品的安装目录下的VC目录）
+
+# 2. 安装依赖（需要 Node 22, pnpm 8）
 cd hedgehog
 npm install -g node-gyp
 pnpm install
 
-# 2. 开发模式启动（Vite + Electron 同时拉起）
+# 3. 开发模式启动（Vite + Electron 同时拉起）
 pnpm dev
 
-# 3. 生产构建（分两步，先 build 再打包）
+# 4. 生产构建（分两步，先 build 再打包）
 cd apps/desktop
 pnpm build
 pnpm dist:win           # 或 dist:mac / dist:linux
