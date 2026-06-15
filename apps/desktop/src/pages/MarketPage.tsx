@@ -14,6 +14,7 @@ export default function MarketPage() {
   const [tab, setTab] = useState<Tab>('llm');
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [downloads, setDownloads] = useState<DownloadState[]>([]);
+  const [localItems, setLocalItems] = useState<any[]>([]);
   const [source, setSource] = useState<string>('online');
   const [lang, setLang] = useState<string>('zh-CN');
 
@@ -35,6 +36,10 @@ export default function MarketPage() {
     window.hedgehog?.capabilityMarket?.getCatalog?.({ kind: tab }).then((res: any) => {
       setItems(res?.items ?? []);
       setSource(res?.source ?? 'online');
+    });
+    // 同时加载已安装项目列表
+    window.hedgehog?.capabilityMarket?.listLocalItems?.({ kind: tab }).then((items: any[]) => {
+      setLocalItems(items || []);
     });
     const off = window.hedgehog?.capabilityMarket?.onDownloadProgress?.((downloads: any[]) => {
       console.log('[MarketPage] Download progress:', downloads);
@@ -63,6 +68,7 @@ export default function MarketPage() {
         'model-market.action.pause',
         'model-market.action.resume',
         'model-market.action.cancel',
+        'model-market.action.downloaded',
         'model-market.toast.usingOfflineCatalog',
       ];
       const results: Record<string, string> = {};
@@ -126,6 +132,7 @@ export default function MarketPage() {
             const downloadState = getDownloadState(item.id);
             const isDownloading = downloadState && downloadState.state === 'downloading';
             const isPaused = downloadState && downloadState.state === 'paused';
+            const isDownloaded = localItems.some(x => x.id === item.id && x.version === item.version);
 
             return (
               <div key={item.id} className="card">
@@ -186,7 +193,20 @@ export default function MarketPage() {
                 )}
 
                 <div style={{ marginTop: 12 }}>
-                  {!downloadState && (
+                  {isDownloaded ? (
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        padding: '6px 14px',
+                        background: '#22c55e',
+                        color: '#fff',
+                        borderRadius: 6,
+                        fontSize: 14,
+                      }}
+                    >
+                      {translations['model-market.action.downloaded'] || '已下载'}
+                    </span>
+                  ) : !downloadState && (
                     <button
                       onClick={async () => {
                         console.log('[MarketPage] Starting download:', item.id);

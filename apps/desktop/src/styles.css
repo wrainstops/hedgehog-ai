@@ -10,7 +10,7 @@ body {
 .app {
   display: grid;
   grid-template-columns: 220px 1fr;
-  height: 100%;
+  height: 100vh;
 }
 
 .sidebar {
@@ -37,10 +37,22 @@ body {
 .sidebar li:hover { background: #1e293b; }
 
 .main {
-  padding: 24px;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
 }
-.main h2 { margin-top: 0; }
+.main h2 { 
+  margin: 0; 
+  padding: 16px 24px;
+  flex-shrink: 0;
+}
+.main > section {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 24px 24px;
+}
 
 .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
 .tabs button {
@@ -146,3 +158,4 @@ body {
 }
 .mic-button.listening { background: #ef4444; animation: pulse 1s infinite; }
 @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }

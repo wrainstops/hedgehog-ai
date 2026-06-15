@@ -27,6 +27,7 @@
   "action.pause": "暂停",
   "action.resume": "继续",
   "action.cancel": "取消",
+  "action.downloaded": "已下载",
   "action.useNow": "启用",
   "action.useAsr": "作为语音识别模型启用",
   "action.setCurrent": "设为当前",

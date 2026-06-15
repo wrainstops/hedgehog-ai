@@ -3,35 +3,6 @@
   "updated_at": "2026-06-13T00:00:00Z",
   "items": [
     {
-      "id": "test-small-model",
-      "kind": "llm",
-      "version": "1.0.0",
-      "name": {
-        "zh-CN": "测试下载 (1MB)",
-        "en-US": "Test Download (1MB)"
-      },
-      "description": {
-        "zh-CN": "用于测试下载功能的小文件",
-        "en-US": "Small file for testing download functionality"
-      },
-      "size_bytes": 1048576,
-      "recommended": false,
-      "author": "Test",
-      "license": {
-        "name": "MIT",
-        "url": "https://opensource.org/licenses/MIT"
-      },
-      "download": {
-        "url": "https://speed.cloudflare.com/__down?bytes=1048576",
-        "mirrors": [
-          "https://proof.ovh.net/files/1Mb.dat"
-        ],
-        "sha256": "",
-        "filename": "test-1mb.bin"
-      },
-      "capabilities": {}
-    },
-    {
       "id": "qwen2-1.5b-instruct-q4_k_m",
       "kind": "llm",
       "version": "1.0.0",

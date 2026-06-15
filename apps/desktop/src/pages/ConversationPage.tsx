@@ -31,6 +31,7 @@ export default function ConversationPage() {
   const [localModels, setLocalModels] = useState<LocalItem[]>([]);
   const [generating, setGenerating] = useState(false);
   const [showModelPicker, setShowModelPicker] = useState(false);
+  const [modelLoading, setModelLoading] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   const voice = useVoice('zh-CN');
@@ -107,12 +108,34 @@ export default function ConversationPage() {
 
   const loadModel = async (item: LocalItem) => {
     setShowModelPicker(false);
-    const result: any = await window.hedgehog.llm.load(item.id, item.install_path, {
-      contextSize: 4096, threads: 4, gpuLayers: 0,
-    });
-    if (!result?.ok) alert(`加载模型失败: ${result?.error || 'unknown'}`);
-    // 重新拉一下本地列表
-    window.hedgehog.capabilityMarket.listLocalItems({ kind: 'llm' }).then(setLocalModels);
+    setModelLoading(true);
+    try {
+      const result: any = await window.hedgehog.llm.load(item.id, item.install_path, {
+        contextSize: 4096, threads: 4, gpuLayers: 0,
+      });
+      if (!result?.ok) {
+        alert(`加载模型失败: ${result?.error || 'unknown'}`);
+      }
+    } finally {
+      // 监听 LLM 状态变化，loading 结束后自动取消
+      const checkReady = setInterval(() => {
+        window.hedgehog?.llm?.getState?.().then((state: LlmState | null) => {
+          if (state?.status === 'ready' || state?.status === 'error') {
+            clearInterval(checkReady);
+            setModelLoading(false);
+            // 主动刷新 llmState，确保 UI 立即更新
+            setLlmState(state);
+            // 重新拉一下本地列表
+            window.hedgehog.capabilityMarket.listLocalItems({ kind: 'llm' }).then(setLocalModels);
+          }
+        });
+      }, 200);
+      // 超时保护：30秒后强制取消 loading
+      setTimeout(() => {
+        clearInterval(checkReady);
+        setModelLoading(false);
+      }, 30000);
+    }
   };
 
   const unloadModel = async () => {
@@ -128,14 +151,16 @@ export default function ConversationPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{
             width: 8, height: 8, borderRadius: 4,
-            background: llmState?.status === 'ready' ? '#10b981' : llmState?.status === 'generating' ? '#f59e0b' : llmState?.status === 'loading' ? '#3b82f6' : llmState?.status === 'error' ? '#ef4444' : '#6b7280'
+            background: modelLoading ? '#3b82f6' : llmState?.status === 'ready' ? '#10b981' : llmState?.status === 'generating' ? '#f59e0b' : llmState?.status === 'loading' ? '#3b82f6' : llmState?.status === 'error' ? '#ef4444' : '#6b7280',
+            opacity: modelLoading ? 1 : undefined,
+            animation: modelLoading ? 'blink 1s infinite' : 'none'
           }}/>
           <span style={{ fontWeight: 600 }}>
-            {llmState?.modelName || '(未加载模型)'}
+            {modelLoading ? '加载模型中...' : (llmState?.modelName || '(未加载模型)')}
             {llmState?.isMock ? ' [mock]' : ''}
           </span>
           <span style={{ color: '#6b7280', marginLeft: 8 }}>
-            [{llmState?.status || 'idle'}]
+            [{modelLoading ? 'loading' : (llmState?.status || 'idle')}]
           </span>
           {generating && (
             <span style={{ marginLeft: 12, color: '#f59e0b', fontSize: 12 }}>
@@ -143,8 +168,8 @@ export default function ConversationPage() {
             </span>
           )}
         </div>
-        <button style={btnStyle()} onClick={() => setShowModelPicker(s => !s)}>
-          切换模型
+        <button style={btnStyle()} onClick={() => setShowModelPicker(s => !s)} disabled={modelLoading}>
+          {modelLoading ? '加载中...' : '切换模型'}
         </button>
         <button style={btnStyle(true)} onClick={unloadModel}>卸载</button>
         {generating && <button style={btnStyle(true)} onClick={stopGenerate}>停止</button>}

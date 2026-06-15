@@ -539,10 +539,20 @@ function maybeRunNext() {
 
 function enqueue(item) {
   console.log('[download] enqueue called with item:', JSON.stringify(item, null, 2));
+  
   if (tasks.has(item.id)) {
     const t = tasks.get(item.id);
     if (t.status === 'failed' || t.status === 'done') tasks.delete(item.id);
     else return;
+  }
+  
+  const existingItems = Storage.listLocalItems(item.kind);
+  const isAlreadyDownloaded = existingItems.some(
+    x => x.id === item.id && x.version === item.version
+  );
+  if (isAlreadyDownloaded) {
+    console.log('[download] Item already downloaded:', item.id, item.version);
+    return;
   }
   const dir = getKindDir(item.kind);
   console.log('[download] getKindDir for', item.kind, '->', dir);

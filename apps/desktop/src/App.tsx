@@ -92,7 +92,7 @@ export default function App() {
       setPageTitle(title);
     };
     loadLabels();
-  }, [lang]); // 只依赖 lang，不依赖 t
+  }, [lang, page]);
 
   return (
     <div className="app">
@@ -112,10 +112,10 @@ export default function App() {
       </aside>
       <main className="main">
         <h2>{pageTitle}</h2>
-        {page === 'market' && <MarketPage />}
-        {page === 'installed' && <InstalledPage />}
-        {page === 'conversation' && <ConversationPage />}
-        {page === 'settings' && <SettingsPage />}
+        {page === 'market' && <section><MarketPage /></section>}
+        {page === 'installed' && <section><InstalledPage /></section>}
+        {page === 'conversation' && <section><ConversationPage /></section>}
+        {page === 'settings' && <section><SettingsPage /></section>}
       </main>
     </div>
   );

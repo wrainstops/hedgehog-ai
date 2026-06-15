@@ -27,6 +27,7 @@
   "action.pause": "Pause",
   "action.resume": "Resume",
   "action.cancel": "Cancel",
+  "action.downloaded": "Downloaded",
   "action.useNow": "Use this",
   "action.useAsr": "Use as speech recognizer",
   "action.setCurrent": "Set current",
