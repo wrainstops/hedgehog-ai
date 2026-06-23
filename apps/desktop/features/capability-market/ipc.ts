@@ -16,7 +16,6 @@ export interface RegistryDeps {
     llmsDir: string;
     asrsDir: string;
     ttssDir: string;
-    skillsDir: string;
   };
   fallbackCatalogPath?: string;
   catalogUrl?: string;

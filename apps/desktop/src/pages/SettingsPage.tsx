@@ -9,7 +9,6 @@ export default function SettingsPage() {
     llmsDir: string;
     asrsDir: string;
     ttssDir: string;
-    skillsDir: string;
   } | null>(null);
 
   useEffect(() => {
@@ -29,7 +28,7 @@ export default function SettingsPage() {
   // 加载翻译示例
   useEffect(() => {
     const loadTranslations = async () => {
-      const keys = ['common.confirm', 'common.cancel', 'model-market.title', 'voice.title', 'skill-market.title'];
+      const keys = ['common.confirm', 'common.cancel', 'model-market.title', 'voice.title'];
       const results: Record<string, string> = {};
       for (const key of keys) {
         results[key] = await window.hedgehog?.i18n?.t?.(key) ?? key;
@@ -113,7 +112,6 @@ export default function SettingsPage() {
                 <li>LLM 模型: <code>{downloadPaths.llmsDir}</code></li>
                 <li>ASR 模型: <code>{downloadPaths.asrsDir}</code></li>
                 <li>TTS 模型: <code>{downloadPaths.ttssDir}</code></li>
-                <li>技能: <code>{downloadPaths.skillsDir}</code></li>
               </ul>
             </div>
 
@@ -179,7 +177,6 @@ export default function SettingsPage() {
           <li>{translations['common.confirm']} / {translations['common.cancel']}</li>
           <li>{translations['model-market.title']}</li>
           <li>{translations['voice.title']}</li>
-          <li>{translations['skill-market.title']}</li>
         </ul>
       </div>
     </div>

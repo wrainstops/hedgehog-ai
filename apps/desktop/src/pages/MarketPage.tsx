@@ -7,7 +7,6 @@ const TABS: Array<{ key: Tab; label: string }> = [
   { key: 'llm', label: 'model-market.tab.llm' },
   { key: 'asr', label: 'model-market.tab.asr' },
   { key: 'tts', label: 'model-market.tab.tts' },
-  { key: 'skill', label: 'model-market.tab.skill' },
 ];
 
 export default function MarketPage() {
@@ -62,7 +61,6 @@ export default function MarketPage() {
         'model-market.tab.llm',
         'model-market.tab.asr',
         'model-market.tab.tts',
-        'model-market.tab.skill',
         'model-market.model.recommended',
         'model-market.action.download',
         'model-market.action.pause',

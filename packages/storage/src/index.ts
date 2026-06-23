@@ -1,4 +1,4 @@
-// 存储层封装：SQLite 四张表（local_items / downloads / settings / installed_skills）
+// 存储层封装：SQLite 三张表（local_items / downloads / settings）
 // 由 Electron 主进程初始化，渲染进程通过 IPC 访问
 
 import Database from 'better-sqlite3';
@@ -41,7 +41,7 @@ export class Storage {
   private initTables(): void {
     const db = this.db;
 
-    // 本地已安装能力注册表（LLM / ASR / TTS / Skill 统一）
+    // 本地已安装能力注册表（LLM / ASR / TTS 统一）
     db.exec(`
       CREATE TABLE IF NOT EXISTS local_items (
         id TEXT NOT NULL,
@@ -74,21 +74,6 @@ export class Storage {
         target_path TEXT NOT NULL,
         url TEXT NOT NULL,
         mirror_index INTEGER DEFAULT 0
-      );
-    `);
-
-    // 技能注册表（更细粒度，含 enabled / permissions / manifest_sha256）
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS installed_skills (
-        id TEXT NOT NULL,
-        version TEXT NOT NULL,
-        kind TEXT NOT NULL DEFAULT 'skill',
-        install_path TEXT NOT NULL,
-        enabled INTEGER DEFAULT 1,
-        installed_at INTEGER,
-        manifest_sha256 TEXT,
-        permissions TEXT,
-        PRIMARY KEY (id, version)
       );
     `);
 
@@ -301,67 +286,5 @@ export class Storage {
 
   deleteDownload(id: string): void {
     this.db.prepare('DELETE FROM downloads WHERE id = ?').run(id);
-  }
-
-  // ----------------- installed_skills -----------------
-
-  insertInstalledSkill(opts: {
-    id: string;
-    version: string;
-    install_path: string;
-    manifest_sha256?: string;
-    permissions?: Record<string, unknown>;
-  }): void {
-    this.db
-      .prepare(
-        `INSERT INTO installed_skills (id, version, kind, install_path, enabled, installed_at, manifest_sha256, permissions)
-         VALUES (?, ?, 'skill', ?, 1, ?, ?, ?)
-         ON CONFLICT(id, version) DO UPDATE SET
-           install_path = excluded.install_path,
-           manifest_sha256 = excluded.manifest_sha256,
-           permissions = excluded.permissions`
-      )
-      .run(
-        opts.id,
-        opts.version,
-        opts.install_path,
-        Date.now(),
-        opts.manifest_sha256 ?? null,
-        opts.permissions ? JSON.stringify(opts.permissions) : null
-      );
-  }
-
-  setSkillEnabled(id: string, version: string, enabled: number): void {
-    this.db
-      .prepare('UPDATE installed_skills SET enabled = ? WHERE id = ? AND version = ?')
-      .run(enabled, id, version);
-  }
-
-  listInstalledSkills(): Array<{
-    id: string;
-    version: string;
-    install_path: string;
-    enabled: number;
-    installed_at: number;
-    manifest_sha256: string | null;
-    permissions: string | null;
-  }> {
-    return this.db
-      .prepare('SELECT * FROM installed_skills ORDER BY installed_at DESC')
-      .all() as Array<{
-      id: string;
-      version: string;
-      install_path: string;
-      enabled: number;
-      installed_at: number;
-      manifest_sha256: string | null;
-      permissions: string | null;
-    }>;
-  }
-
-  deleteInstalledSkill(id: string, version: string): void {
-    this.db
-      .prepare('DELETE FROM installed_skills WHERE id = ? AND version = ?')
-      .run(id, version);
   }
 }

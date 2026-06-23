@@ -8,8 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./capability-market": "./src/capability-market.ts",
-    "./voice": "./src/voice.ts",
-    "./skill": "./src/skill.ts"
+    "./voice": "./src/voice.ts"
   },
   "scripts": {
     "build": "tsc --noEmit",

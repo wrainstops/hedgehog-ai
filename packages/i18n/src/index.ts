@@ -2,7 +2,7 @@
 // 设计文档: design.md §4.8 "系统级 i18n 模块规格"
 // 特性:
 //   - 多语言（zh-CN / en-US，含父语言回退链）
-//   - 命名空间（model-market / voice / skill-market / common / nav）
+//   - 命名空间（model-market / voice / common / nav）
 //   - 懒加载（按需加载 JSON，避免首屏 IO）
 //   - 参数替换（{name} → 实际值）
 //   - 复数：{count,plural,one{...} other{...}}
@@ -16,8 +16,7 @@ export type I18nNamespace =
   | 'common'
   | 'nav'
   | 'model-market'
-  | 'voice'
-  | 'skill-market';
+  | 'voice';
 
 /** 语言回退链：当目标语言键缺失时按该顺序查找 */
 export const LANGUAGE_FALLBACK: Record<Language, Language[]> = {

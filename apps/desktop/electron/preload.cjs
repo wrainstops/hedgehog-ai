@@ -38,16 +38,6 @@ contextBridge.exposeInMainWorld('hedgehog', {
     }
   },
 
-  // 技能运行时
-  skill: {
-    listAll: () => ipcRenderer.invoke('skill:listAll'),
-    listEnabled: () => ipcRenderer.invoke('skill:listEnabled'),
-    enable: (id, version) => ipcRenderer.invoke('skill:enable', id, version),
-    disable: (id, version) => ipcRenderer.invoke('skill:disable', id, version),
-    uninstall: (id, version) => ipcRenderer.invoke('skill:uninstall', id, version),
-    invoke: (id, version, toolName, args) => ipcRenderer.invoke('skill:invoke', id, version, toolName, args)
-  },
-
   // 文件系统
   shell: {
     openPath: (filePath) => ipcRenderer.invoke('shell:openPath', filePath)

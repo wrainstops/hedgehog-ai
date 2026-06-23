@@ -53,20 +53,6 @@ declare global {
         onToken: (callback: (text: string) => void) => () => void;
       };
 
-      // 技能运行时
-      skill: {
-        listAll: () => Promise<any[]>;
-        listEnabled: () => Promise<any[]>;
-        enable: (id: string, version: string) => Promise<boolean>;
-        disable: (id: string, version: string) => Promise<boolean>;
-        uninstall: (id: string, version: string) => Promise<boolean>;
-        invoke: (id: string, version: string, toolName: string, args: any) => Promise<{
-          ok: boolean;
-          data?: any;
-          error?: string;
-        }>;
-      };
-
       // 文件系统
       shell: {
         openPath: (filePath: string) => Promise<boolean>;
@@ -88,7 +74,6 @@ declare global {
           llmsDir: string;
           asrsDir: string;
           ttssDir: string;
-          skillsDir: string;
         }>;
         setDownloadPath: (basePath: string) => Promise<boolean>;
       };

@@ -34,10 +34,10 @@ pnpm dist:win           # 或 dist:mac / dist:linux
 ## 已实现功能模块
 
 ### 1. 能力市场（Capability Market）
-- **四 Tab**：语言模型（LLM） / 语音识别（ASR） / 语音合成（TTS，占位） / 技能
+- **三 Tab**：语言模型（LLM） / 语音识别（ASR） / 语音合成（TTS，占位）
 - **下载引擎**：HTTP Range 断点续传、实时 SHA-256、速度 / ETA 计算、mirror 回退、zip 解压
 - **catalog 三级回退**：在线 URL → userData 缓存 → 内置 `resources/fallback-models.json`
-- **本地注册表**：已安装项（llm / asr / tts / skill）在 SQLite（或 fallback JSON）中统一管理
+- **本地注册表**：已安装项（llm / asr / tts）在 SQLite（或 fallback JSON）中统一管理
 
 ### 2. 本地 LLM 推理（`node-llama-cpp`）
 - 流式生成，UI 端逐 token 展示
@@ -49,15 +49,8 @@ pnpm dist:win           # 或 dist:mac / dist:linux
 - 长按麦克风按钮录音 → 识别文本自动追加到输入框
 - 无需额外服务进程 / 模型下载即可演示
 
-### 4. 技能市场 & 运行时（http-proxy executor）
-- **skill.json manifest** 驱动：`id / version / runtime / permissions / tools / input_schema / response_path`
-- **host 白名单**：只允许访问 `permissions.network` 声明的 host
-- **URL 模板替换**：`https://wttr.in/{city}?format=j1` → 参数注入
-- **响应字段可选裁剪**：`response_path` 点号路径取值
-- UI 提供「测试调用」按钮与 JSON 结果预览
-
-### 5. 系统级 i18n（zh-CN / en-US）
-- 命名空间：`common / nav / model-market / voice / skill-market`
+### 4. 系统级 i18n（zh-CN / en-US）
+- 命名空间：`common / nav / model-market / voice`
 - 主进程集中管理，设置页切换语言
 
 ---
@@ -74,20 +67,18 @@ hedgehog/
 ├── docs/
 │   └── design.md             # 产品与技术设计文档
 ├── packages/
-│   ├── protocol/src/         # 跨模块类型（capability / skill / llm / voice / i18n）
+│   ├── protocol/src/         # 跨模块类型（capability / llm / voice / i18n）
 │   ├── storage/src/          # SQLite 封装（local_items / downloads / settings）
 │   └── i18n/                 # 系统级多语言 + locales JSON
 ├── apps/desktop/
 │   ├── electron/
-│   │   ├── main.cjs          # Electron 主进程（能力市场 + LLM + skill + voice IPC）
+│   │   ├── main.cjs          # Electron 主进程（能力市场 + LLM + voice IPC）
 │   │   ├── preload.cjs       # 暴露 window.hedgehog.* API
 │   │   └── features/
-│   │       ├── llm/index.cjs # node-llama-cpp 封装（含 mock 模式）
-│   │       └── skill/index.cjs# http-proxy executor
+│   │       └── llm/index.cjs # node-llama-cpp 封装（含 mock 模式）
 │   ├── features/             # TypeScript 参考实现（catalog / downloader / registry）
 │   ├── resources/
-│   │   ├── fallback-models.json   # 离线 catalog
-│   │   └── sample-skills/         # 两个示例技能（weather-cn / todo-local）
+│   │   └── fallback-models.json   # 离线 catalog
 │   ├── src/
 │   │   ├── App.tsx
 │   │   ├── main.tsx
@@ -131,50 +122,6 @@ hedgehog/
 - `voice.startRecording()` / `stopRecording()` / `cancelRecording()` / `getState()`
 - 麦克风权限由系统弹窗授予
 
-### 技能运行时
-| 方法 | 返回 | 说明 |
-|---|---|---|
-| `skill.listAll()` | `SkillInfo[]` | 含 tools / permissions |
-| `skill.listEnabled()` | `SkillInfo[]` | |
-| `skill.enable(id, version)` | `bool` | |
-| `skill.disable(id, version)` | `bool` | |
-| `skill.uninstall(id, version)` | `bool` | 删除磁盘目录 |
-| `skill.invoke(id, version, toolName, args)` | `{ok, data, error?}` | 权限校验 + HTTP 请求 |
-
----
-
-## 技能格式说明（skill.json）
-
-```jsonc
-{
-  "id": "weather-cn",
-  "version": "1.0.0",
-  "name": "天气查询（中国城市）",
-  "description": "使用 wttr.in 查询当前天气",
-  "runtime": "http-proxy",
-  "permissions": {
-    "network": ["https://wttr.in"]
-  },
-  "tools": [
-    {
-      "name": "get_weather",
-      "description": "查询指定城市的当前天气",
-      "endpoint": "https://wttr.in/{city}?format=j1",
-      "method": "GET",
-      "input_schema": {
-        "type": "object",
-        "properties": { "city": { "type": "string" } },
-        "required": ["city"]
-      },
-      "response_path": "current_condition.0"
-    }
-  ]
-}
-```
-
-- **安装方式**：把整个目录拷贝到应用数据目录 `skills/` 下，或从"能力市场"下载 zip
-- **卸载**：在"已安装"页点击按钮即可（含目录删除）
-
 ---
 
 ## 本地验证清单
@@ -182,10 +129,9 @@ hedgehog/
 - [ ] `pnpm install` 成功
 - [ ] `pnpm dev` 正常打开 Electron 窗口
 - [ ] 左侧导航可切换四个页面
-- [ ] "已安装"页显示本地 LLM 与技能
+- [ ] "已安装"页显示本地 LLM
 - [ ] 对话页可输入文本 + 语音识别转文字
 - [ ] 加载一个 `.gguf` 后流式回复正常
-- [ ] 把 sample-skills 拷贝到 `{userData}/skills/` 后能"测试调用"
 - [ ] `pnpm build && pnpm dist:win` / `dist:mac` / `dist:linux` 打包成功
 
 ---
@@ -209,7 +155,7 @@ pnpm dist:linux          # Linux：AppImage + deb
 
 ## 后续可扩展方向
 
-1. **Agent Runtime**：把 LLM + skills 合成为 tool-calling agent（对话页由模型自动选择合适技能）
+1. **Agent Runtime**：把 LLM 与工具调用合成为 tool-calling agent（对话页由模型自动选择合适工具）
 2. **多轮对话持久化**：当前消息仅存内存，可写入 SQLite
 3. **本地 ASR/TTS**：替换 Web Speech API 为 Vosk / Whisper.cpp / piper 等本地模型
 4. **模型格式兼容**：除 GGUF 外支持 ollama / OpenAI-compatible 远程端点

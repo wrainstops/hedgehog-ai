@@ -3,7 +3,6 @@
   "tab.llm": "Language Models",
   "tab.asr": "Speech Recognition",
   "tab.tts": "Text-to-Speech (coming soon)",
-  "tab.skill": "Skills",
   "updated.at": "Updated {date}",
 
   "filter.size": "Size",
@@ -41,7 +40,6 @@
   "myInstalled.currentAsr": "Current ASR model",
   "myInstalled.importLocalLlm": "Import local model (.gguf)",
   "myInstalled.importLocalAsr": "Import local ASR model directory",
-  "myInstalled.importLocalSkill": "Import local skill",
 
   "download.downloading": "Downloading",
   "download.extracting": "Extracting",

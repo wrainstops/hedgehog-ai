@@ -2,7 +2,7 @@
 // 对应 design.md §4.3 的 models.json / local_items / downloads
 
 /** 能力项类型 */
-export type ItemKind = 'llm' | 'asr' | 'tts' | 'skill';
+export type ItemKind = 'llm' | 'asr' | 'tts';
 
 /** 多语言字符串（zh-CN / en-US 双写） */
 export interface I18nString {
@@ -38,28 +38,7 @@ export interface TtsExtra {
   voicePresets?: string[];
 }
 
-/** Skill 专属字段 */
-export interface SkillExtra {
-  runtime: 'http-proxy' | 'node-script' | 'json-config';
-  permissions?: {
-    network?: string[];
-    fs?: string[];
-    child_process?: string[];
-  };
-  tools: SkillTool[];
-}
-
-export interface SkillTool {
-  name: string;
-  description: I18nString;
-  input_schema: {
-    type: string;
-    properties: Record<string, unknown>;
-    required?: string[];
-  };
-}
-
-/** catalog 中的单个能力项（LLM / ASR / TTS / Skill 统一建模） */
+/** catalog 中的单个能力项（LLM / ASR / TTS 统一建模） */
 export interface CatalogItem {
   id: string;
   version: string;
@@ -77,7 +56,6 @@ export interface CatalogItem {
   llm?: LlmExtra;
   asr?: AsrExtra;
   tts?: TtsExtra;
-  skill?: SkillExtra;
 }
 
 /** catalog 根结构 */
@@ -154,7 +132,6 @@ export const SETTING_KEYS = {
   LLMS_DIR: 'llms_dir',
   ASRS_DIR: 'asrs_dir',
   TTSS_DIR: 'ttss_dir',
-  SKILLS_DIR: 'skills_dir',
   MAX_CONCURRENT_DOWNLOADS: 'max_concurrent_downloads',
   VOICE_ASR_MODEL: 'voice.asr_model',
   VOICE_ASR_LANG: 'voice.asr_lang',

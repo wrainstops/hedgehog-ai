@@ -24,7 +24,6 @@ export interface DownloaderDeps {
     llmsDir: string;
     asrsDir: string;
     ttssDir: string;
-    skillsDir: string;
   };
   onUpdate: (states: DownloadState[]) => void;
 }
@@ -55,7 +54,6 @@ function targetDirForKind(deps: DownloaderDeps, kind: ItemKind): string {
     case 'llm': return deps.dirs.llmsDir;
     case 'asr': return deps.dirs.asrsDir;
     case 'tts': return deps.dirs.ttssDir;
-    case 'skill': return deps.dirs.skillsDir;
   }
 }
 

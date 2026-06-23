@@ -12,15 +12,13 @@ const crypto = require('node:crypto');
 const zlib = require('node:zlib');
 
 const llm = require('./features/llm/index.cjs');
-const skill = require('./features/skill/index.cjs');
 
 // --- 初始化目录 & SQLite ---
 const userData = app.getPath('userData');
 const llmsDir = path.join(userData, 'llms');
 const asrsDir = path.join(userData, 'asrs');
 const ttssDir = path.join(userData, 'tts');
-const skillsDir = path.join(userData, 'skills');
-for (const d of [llmsDir, asrsDir, ttssDir, skillsDir]) fs.mkdirSync(d, { recursive: true });
+for (const d of [llmsDir, asrsDir, ttssDir]) fs.mkdirSync(d, { recursive: true });
 
 let Database;
 try {
@@ -135,7 +133,7 @@ const Storage = (() => {
 
 // --- i18n 简易实现 ---
 function loadMessages(lang) {
-  const namespaces = ['common', 'nav', 'model-market', 'voice', 'skill-market'];
+  const namespaces = ['common', 'nav', 'model-market', 'voice'];
   const result = {};
   // __dirname 是 apps/desktop/electron/，需要上 3 级到项目根目录
   const localeDirs = [
@@ -259,7 +257,6 @@ async function loadCatalog({ kind, force } = {}) {
 const defaultLlmsDir = path.join(userData, 'llms');
 const defaultAsrsDir = path.join(userData, 'asrs');
 const defaultTtssDir = path.join(userData, 'tts');
-const defaultSkillsDir = path.join(userData, 'skills');
 
 // 获取当前下载路径配置
 function getKindDir(kind) {
@@ -271,7 +268,6 @@ function getKindDir(kind) {
     llm: defaultLlmsDir,
     asr: defaultAsrsDir,
     tts: defaultTtssDir,
-    skill: defaultSkillsDir,
   })[kind] || userData;
 }
 
@@ -294,7 +290,6 @@ ipcMain.handle('settings:getDownloadPaths', () => {
     llmsDir: path.join(customBase || userData, 'llm'),
     asrsDir: path.join(customBase || userData, 'asr'),
     ttssDir: path.join(customBase || userData, 'tts'),
-    skillsDir: path.join(customBase || userData, 'skill'),
   };
 });
 
@@ -306,11 +301,10 @@ ipcMain.handle('settings:setDownloadPath', (_e, basePath) => {
     ensureDir(path.join(basePath, 'llm'));
     ensureDir(path.join(basePath, 'asr'));
     ensureDir(path.join(basePath, 'tts'));
-    ensureDir(path.join(basePath, 'skill'));
   } else {
     Storage.deleteSetting('download.base_path');
     // 确保默认路径存在
-    for (const d of [defaultLlmsDir, defaultAsrsDir, defaultTtssDir, defaultSkillsDir]) {
+    for (const d of [defaultLlmsDir, defaultAsrsDir, defaultTtssDir]) {
       ensureDir(d);
     }
   }
@@ -597,7 +591,6 @@ function createWindow() {
 
 app.whenReady().then(() => {
   // ---- IPC handlers ----
-  skill.register();
   // filesystem
   ipcMain.handle('shell:openPath', (_e, p) => { try { shell.showItemInFolder(p); return true; } catch { return false; } });
 
