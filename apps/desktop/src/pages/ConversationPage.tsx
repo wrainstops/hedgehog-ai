@@ -32,9 +32,167 @@ export default function ConversationPage() {
   const [generating, setGenerating] = useState(false);
   const [showModelPicker, setShowModelPicker] = useState(false);
   const [modelLoading, setModelLoading] = useState(false);
+  const [systemCommandResult, setSystemCommandResult] = useState<string | null>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   const voice = useVoice('zh-CN');
+
+  // --- 系统命令识别和执行 ---
+  const executeSystemCommand = useCallback(async (userInput: string): Promise<boolean> => {
+    const input = userInput.toLowerCase();
+
+    // 1. 识别打开文件命令
+    const openFilePatterns = [
+      /用\s*(.+?)\s*打开\s*(.+)/i,  // "用记事本打开hosts文件"
+      /打开\s*(.+?)\s*文件\s*(.+)/i,  // "打开hosts文件用记事本"
+      /打开\s*(.+)/i,  // "打开hosts文件"
+    ];
+
+    for (const pattern of openFilePatterns) {
+      const match = userInput.match(pattern);
+      if (match) {
+        let app = match[1] || '';
+        let file = match[2] || match[1] || '';
+
+        // 常见文件路径映射
+        const filePaths: Record<string, string> = {
+          'hosts': 'C:\\Windows\\System32\\drivers\\etc\\hosts',
+          'hosts文件': 'C:\\Windows\\System32\\drivers\\etc\\hosts',
+          '环境变量': 'C:\\Windows\\System32\\sysdm.cpl',
+          '系统属性': 'C:\\Windows\\System32\\sysdm.cpl',
+        };
+
+        const filePath = filePaths[file] || file;
+
+        // 如果有指定应用，先打开应用
+        if (app && app !== '文件') {
+          const appResult = await window.hedgehog?.system?.openApp?.(app);
+          if (appResult?.ok) {
+            setSystemCommandResult(`已启动 ${app}，正在尝试打开文件...`);
+          }
+        }
+
+        // 打开文件
+        const fileResult = await window.hedgehog?.system?.openFile?.(filePath);
+        if (fileResult?.ok) {
+          setSystemCommandResult(`✅ 已打开: ${filePath}`);
+          return true;
+        } else {
+          setSystemCommandResult(`❌ 打开失败: ${fileResult?.error}`);
+          return true;
+        }
+      }
+    }
+
+    // 2. 识别打开应用命令
+    const openAppPatterns = [
+      /打开\s*(微信|vscode|notepad|记事本|calc|计算器|taskmgr|任务管理器|explorer|文件管理器|chrome|浏览器)/i,
+      /启动\s*(微信|vscode|notepad|记事本|calc|计算器|taskmgr|任务管理器|explorer|文件管理器|chrome|浏览器)/i,
+      /用\s*(微信|vscode|notepad|记事本|calc|计算器|taskmgr|任务管理器|explorer|文件管理器|chrome|浏览器)\s*打开/i,
+    ];
+
+    for (const pattern of openAppPatterns) {
+      const match = userInput.match(pattern);
+      if (match) {
+        const appName = match[1];
+        const result = await window.hedgehog?.system?.openApp?.(appName);
+        if (result?.ok) {
+          setSystemCommandResult(`✅ 已启动: ${appName}`);
+          return true;
+        } else {
+          setSystemCommandResult(`❌ 启动失败: ${result?.error}`);
+          return true;
+        }
+      }
+    }
+
+    // 3. 识别执行命令
+    const executePatterns = [
+      /执行命令\s*[:：]?\s*(.+)/i,
+      /运行\s*[:：]?\s*(.+)/i,
+      /cmd\s*[:：]?\s*(.+)/i,
+    ];
+
+    for (const pattern of executePatterns) {
+      const match = userInput.match(pattern);
+      if (match) {
+        const command = match[1].trim();
+        const result = await window.hedgehog?.system?.executeCommand?.(command);
+        if (result?.ok) {
+          setSystemCommandResult(`✅ 命令执行成功:\n${result.data}`);
+          if (result.stderr) {
+            setSystemCommandResult(prev => `${prev}\n⚠️ 警告:\n${result.stderr}`);
+          }
+        } else {
+          setSystemCommandResult(`❌ 命令执行失败: ${result?.error}`);
+        }
+        return true;
+      }
+    }
+
+    // 4. 识别系统信息查询
+    const systemInfoPatterns = [
+      /系统信息/i,
+      /系统状态/i,
+      /电脑信息/i,
+      /查看系统/i,
+    ];
+
+    for (const pattern of systemInfoPatterns) {
+      if (pattern.test(input)) {
+        const result = await window.hedgehog?.system?.getInfo?.();
+        if (result?.ok && result.data) {
+          const info = result.data;
+          setSystemCommandResult(`📊 系统信息:\n` +
+            `操作系统: ${info.platform} (${info.arch})\n` +
+            `主机名: ${info.hostname}\n` +
+            `CPU 核心数: ${info.cpus}\n` +
+            `总内存: ${info.totalmem}\n` +
+            `可用内存: ${info.freemem}\n` +
+            `运行时间: ${info.uptime}\n` +
+            `用户目录: ${info.homedir}\n` +
+            `临时目录: ${info.tmpdir}`);
+          return true;
+        }
+      }
+    }
+
+    // 5. 识别文件搜索
+    const searchPatterns = [
+      /搜索\s*(.+?)\s*(在|从)\s*(.+)/i,
+      /在\s*(.+?)\s*中搜索\s*(.+)/i,
+      /查找\s*(.+)/i,
+    ];
+
+    for (const pattern of searchPatterns) {
+      const match = userInput.match(pattern);
+      if (match) {
+        let patternStr = match[1] || '';
+        let searchPath = match[3] || match[2] || '';
+
+        // 默认搜索路径
+        if (!searchPath) {
+          searchPath = 'C:\\Users';
+        }
+
+        const result = await window.hedgehog?.system?.searchFiles?.(searchPath, patternStr);
+        if (result?.ok && result.data) {
+          const files = result.data.slice(0, 10); // 限制显示前10个结果
+          let output = `🔍 搜索结果 (${result.data.length} 个文件):\n`;
+          files.forEach(file => {
+            output += `\n📄 ${file.name}\n   路径: ${file.path}\n   大小: ${file.size} bytes\n   修改时间: ${new Date(file.modified).toLocaleString()}\n`;
+          });
+          setSystemCommandResult(output);
+          return true;
+        } else {
+          setSystemCommandResult(`❌ 搜索失败: ${result?.error}`);
+          return true;
+        }
+      }
+    }
+
+    return false; // 不是系统命令
+  }, []);
 
   // --- 拉取 LLM 状态 & 本地模型列表
   useEffect(() => {
@@ -57,12 +215,31 @@ export default function ConversationPage() {
 
   const send = useCallback(async () => {
     const text = input.trim();
-    if (!text || !llmState || llmState.status !== 'ready') {
-      if (!llmState || llmState.status !== 'ready') {
-        alert('请先在能力市场下载一个模型并加载');
+    if (!text) return;
+
+    // 先检查是否是系统命令
+    const isSystemCommand = await executeSystemCommand(text);
+    if (isSystemCommand) {
+      // 添加用户消息
+      const userMsg: ChatMessage = { id: `u-${Date.now()}`, role: 'user', content: text };
+      setMessages((prev) => [...prev, userMsg]);
+      setInput('');
+
+      // 添加系统命令结果消息
+      if (systemCommandResult) {
+        const systemMsg: ChatMessage = { id: `s-${Date.now()}`, role: 'assistant', content: systemCommandResult };
+        setMessages((prev) => [...prev, systemMsg]);
+        setSystemCommandResult(null);
       }
       return;
     }
+
+    // 如果不是系统命令，检查是否需要 LLM
+    if (!llmState || llmState.status !== 'ready') {
+      alert('请先在能力市场下载一个模型并加载');
+      return;
+    }
+
     const userMsg: ChatMessage = { id: `u-${Date.now()}`, role: 'user', content: text };
     const assistantMsg: ChatMessage = { id: `a-${Date.now()}`, role: 'assistant', content: '' };
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
@@ -173,6 +350,10 @@ export default function ConversationPage() {
         </button>
         <button style={btnStyle(true)} onClick={unloadModel}>卸载</button>
         {generating && <button style={btnStyle(true)} onClick={stopGenerate}>停止</button>}
+        <button style={btnStyle()} onClick={() => {
+          alert('🤖 系统命令帮助:\n\n📁 文件操作:\n• "用记事本打开hosts文件"\n• "打开hosts文件"\n\n🚀 应用启动:\n• "打开微信"\n• "启动vscode"\n• "打开浏览器"\n\n💻 系统命令:\n• "执行命令: ipconfig"\n• "运行: dir"\n\n📊 系统信息:\n• "系统信息"\n• "电脑信息"\n\n🔍 文件搜索:\n• "搜索hosts在C:\\Windows"\n• "查找project"');
+          taRef.current?.focus();
+        }}>💡 帮助</button>
       </div>
 
       {showModelPicker && (

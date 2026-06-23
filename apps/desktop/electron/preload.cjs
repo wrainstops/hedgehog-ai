@@ -43,6 +43,15 @@ contextBridge.exposeInMainWorld('hedgehog', {
     openPath: (filePath) => ipcRenderer.invoke('shell:openPath', filePath)
   },
 
+  // 系统操作
+  system: {
+    openFile: (filePath) => ipcRenderer.invoke('system:openFile', filePath),
+    executeCommand: (command, options) => ipcRenderer.invoke('system:executeCommand', command, options),
+    openApp: (appName) => ipcRenderer.invoke('system:openApp', appName),
+    searchFiles: (searchPath, pattern) => ipcRenderer.invoke('system:searchFiles', searchPath, pattern),
+    getInfo: () => ipcRenderer.invoke('system:getInfo'),
+  },
+
   // 对话框
   dialog: {
     showOpenDialog: (options) => ipcRenderer.invoke('dialog:showOpenDialog', options),

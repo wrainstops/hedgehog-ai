@@ -58,6 +58,43 @@ declare global {
         openPath: (filePath: string) => Promise<boolean>;
       };
 
+      // 系统操作
+      system: {
+        openFile: (filePath: string) => Promise<{ ok: boolean; message?: string; error?: string }>;
+        executeCommand: (command: string, options?: { timeout?: number }) => Promise<{
+          ok: boolean;
+          data?: string;
+          error?: string;
+          stderr?: string;
+        }>;
+        openApp: (appName: string) => Promise<{ ok: boolean; message?: string; error?: string }>;
+        searchFiles: (searchPath: string, pattern: string) => Promise<{
+          ok: boolean;
+          data?: Array<{
+            name: string;
+            path: string;
+            isDirectory: boolean;
+            size: number;
+            modified: Date;
+          }>;
+          error?: string;
+        }>;
+        getInfo: () => Promise<{
+          ok: boolean;
+          data?: {
+            platform: string;
+            arch: string;
+            hostname: string;
+            homedir: string;
+            tmpdir: string;
+            cpus: number;
+            totalmem: string;
+            freemem: string;
+            uptime: string;
+          };
+        }>;
+      };
+
       // i18n
       i18n: {
         getLang: () => Promise<string>;

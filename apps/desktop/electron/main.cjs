@@ -594,6 +594,176 @@ app.whenReady().then(() => {
   // filesystem
   ipcMain.handle('shell:openPath', (_e, p) => { try { shell.showItemInFolder(p); return true; } catch { return false; } });
 
+  // system operations
+  const { exec } = require('child_process');
+
+  // 打开文件或应用程序
+  ipcMain.handle('system:openFile', async (_e, filePath) => {
+    try {
+      await shell.openPath(filePath);
+      return { ok: true, message: `已打开: ${filePath}` };
+    } catch (error) {
+      return { ok: false, error: error.message };
+    }
+  });
+
+  // 执行系统命令（带安全限制）
+  ipcMain.handle('system:executeCommand', async (_e, command, options = {}) => {
+    const { timeout = 30000 } = options;
+
+    // 安全检查：限制可执行的命令
+    const dangerousCommands = ['format', 'del', 'rm', 'shutdown', 'reboot', 'format'];
+    const isDangerous = dangerousCommands.some(cmd => command.toLowerCase().includes(cmd));
+
+    if (isDangerous) {
+      return { ok: false, error: '此命令被安全策略阻止' };
+    }
+
+    return new Promise((resolve) => {
+      const timeoutId = setTimeout(() => {
+        resolve({ ok: false, error: '命令执行超时' });
+      }, timeout);
+
+      exec(command, { encoding: 'utf8' }, (error, stdout, stderr) => {
+        clearTimeout(timeoutId);
+        if (error) {
+          resolve({ ok: false, error: error.message, stderr });
+        } else {
+          resolve({ ok: true, data: stdout, stderr });
+        }
+      });
+    });
+  });
+
+  // 打开特定应用程序
+  ipcMain.handle('system:openApp', async (_e, appName) => {
+    // 常见应用的可能路径列表
+    const appPaths = {
+      '微信': [
+        'C:\\Program Files (x86)\\Tencent\\WeChat\\WeChat.exe',
+        'C:\\Program Files\\Tencent\\WeChat\\WeChat.exe',
+        path.join(process.env.USERPROFILE || '', 'AppData', 'Roaming', 'Tencent', 'WeChat', 'WeChat.exe'),
+        'wechat',
+      ],
+      'vscode': [
+        'C:\\Program Files\\Microsoft VS Code\\Code.exe',
+        'C:\\Program Files (x86)\\Microsoft VS Code\\Code.exe',
+        path.join(process.env.USERPROFILE || '', 'AppData', 'Local', 'Programs', 'Microsoft VS Code', 'Code.exe'),
+        'code',
+      ],
+      'notepad': ['notepad'],
+      '记事本': ['notepad'],
+      'calc': ['calc'],
+      '计算器': ['calc'],
+      'taskmgr': ['taskmgr'],
+      '任务管理器': ['taskmgr'],
+      'explorer': ['explorer'],
+      '文件管理器': ['explorer'],
+      'chrome': [
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+        'chrome',
+      ],
+      '浏览器': [
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+        'chrome',
+      ],
+      'qq': [
+        'C:\\Program Files (x86)\\Tencent\\QQ\\Bin\\QQ.exe',
+        'C:\\Program Files\\Tencent\\QQ\\Bin\\QQ.exe',
+        'qq',
+      ],
+      '钉钉': [
+        'C:\\Program Files (x86)\\DingDing\\dingding.exe',
+        'C:\\Program Files\\DingDing\\dingding.exe',
+        path.join(process.env.USERPROFILE || '', 'AppData', 'Local', 'DingDing', 'dingding.exe'),
+        'dingding',
+      ],
+      'wps': [
+        'C:\\Program Files (x86)\\Kingsoft\\WPS Office\\11.1.0.11694\\office6\\wps.exe',
+        'C:\\Program Files\\Kingsoft\\WPS Office\\11.1.0.11694\\office6\\wps.exe',
+        'wps',
+      ],
+      'word': ['winword'],
+      'excel': ['excel'],
+      'ppt': ['powerpnt'],
+      'powerpoint': ['powerpnt'],
+    };
+
+    const paths = appPaths[appName.toLowerCase()] || [appName];
+    const fs = require('fs').promises;
+
+    for (const cmd of paths) {
+      try {
+        // 检查路径是否存在（仅对完整路径检查）
+        if (cmd.includes('\\')) {
+          try {
+            await fs.access(cmd);
+          } catch {
+            continue; // 文件不存在，尝试下一个路径
+          }
+        }
+
+        await shell.openPath(cmd);
+        return { ok: true, message: `已启动: ${appName}` };
+      } catch (error) {
+        // 继续尝试下一个路径
+      }
+    }
+
+    return { ok: false, error: `无法启动 ${appName}，未找到可执行文件` };
+  });
+
+  // 搜索文件
+  ipcMain.handle('system:searchFiles', async (_e, searchPath, pattern) => {
+    const { readdir, stat } = require('fs').promises;
+    const path = require('path');
+
+    try {
+      const files = await readdir(searchPath, { withFileTypes: true });
+      const results = [];
+
+      for (const file of files) {
+        const filePath = path.join(searchPath, file.name);
+        if (file.name.toLowerCase().includes(pattern.toLowerCase())) {
+          const stats = await stat(filePath);
+          results.push({
+            name: file.name,
+            path: filePath,
+            isDirectory: file.isDirectory(),
+            size: stats.size,
+            modified: stats.mtime
+          });
+        }
+      }
+
+      return { ok: true, data: results };
+    } catch (error) {
+      return { ok: false, error: error.message };
+    }
+  });
+
+  // 获取系统信息
+  ipcMain.handle('system:getInfo', async () => {
+    const os = require('os');
+
+    return {
+      ok: true,
+      data: {
+        platform: os.platform(),
+        arch: os.arch(),
+        hostname: os.hostname(),
+        homedir: os.homedir(),
+        tmpdir: os.tmpdir(),
+        cpus: os.cpus().length,
+        totalmem: Math.round(os.totalmem() / 1024 / 1024 / 1024) + ' GB',
+        freemem: Math.round(os.freemem() / 1024 / 1024 / 1024) + ' GB',
+        uptime: Math.round(os.uptime() / 60) + ' minutes'
+      }
+    };
+  });
+
   // i18n
   ipcMain.handle('i18n:getLang', () => Storage.getSetting('i18n.lang') || 'zh-CN');
   ipcMain.handle('i18n:setLang', async (_e, lang) => {
